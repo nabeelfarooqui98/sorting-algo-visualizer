@@ -1,34 +1,70 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useCallback, useEffect, useState } from 'react'
+import './styles/app.css'
+import './styles/bars.css'
+import { Controls } from './components/Controls'
+import { BarChart } from './components/BarChart'
+import { Stats } from './components/Stats'
+import { useSorter } from './hooks/useSorter'
+import { Bubble } from './algorithms/bubble'
+
+function randomArray(length: number, min = 1, max = 100): number[] {
+  const arr: number[] = []
+  for (let i = 0; i < length; i++) {
+    arr.push(Math.floor(Math.random() * (max - min + 1)) + min)
+  }
+  return arr
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [size, setSize] = useState<number>(40)
+  const [baseArr, setBaseArr] = useState<number[]>(() => randomArray(40))
+
+  const shuffle = useCallback((n: number) => {
+    setBaseArr(randomArray(n))
+  }, [])
+
+  useEffect(() => {
+    shuffle(size)
+  }, [size, shuffle])
+
+  const sorter = useSorter(Bubble.generate, baseArr, 150)
+
+  const onShuffle = useCallback(() => {
+    shuffle(size)
+  }, [shuffle, size])
+
+  const onSizeChange = useCallback((n: number) => {
+    setSize(n)
+  }, [])
+
+  const onPlayPause = useCallback(() => {
+    if (!sorter.playing && sorter.status === 'Sorted') {
+      sorter.reset(sorter.array.slice())
+    }
+    sorter.setPlaying(!sorter.playing)
+  }, [sorter])
+
+  const onSpeedChange = useCallback((n: number) => {
+    sorter.setSpeedMs(n)
+  }, [sorter])
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="container">
+      <div className="panel">
+        <Controls
+          playing={sorter.playing}
+          onPlayPause={onPlayPause}
+          onStep={sorter.stepOnce}
+          onShuffle={onShuffle}
+          size={size}
+          onSizeChange={onSizeChange}
+          speedMs={sorter.speedMs}
+          onSpeedChange={onSpeedChange}
+        />
+        <BarChart data={sorter.array} highlight={sorter.highlight} />
+        <Stats comparisons={sorter.comparisons} swaps={sorter.swaps} status={sorter.status} />
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </div>
   )
 }
 
